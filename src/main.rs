@@ -5,7 +5,7 @@ use clap::Parser;
 
 const HEIGHT: usize = 256;
 const WIDTH: usize = 256;
-const SCALE: f32 = 2.0;
+const SCALE: f32 = 3.0;
 
 type BitMap = Vec<Vec<u32>>;
 
@@ -47,15 +47,15 @@ fn draw_buffer(buffer: &BitMap) {
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             if buffer[y][x] > 0 {
-            let brightness: u32 = buffer[y][x];
+                let brightness = ((buffer[y][x] as f32).log10() * 106.0).clamp(0.0, 255.0) as u8;
 
-            draw_rectangle(
-                x as f32 * SCALE,
-                y as f32 * SCALE,
-                SCALE,
-                SCALE,
-                Color::from_rgba(255, 255, 255, brightness.clamp(0, 255).try_into().unwrap()),
-            );
+                draw_rectangle(
+                    x as f32 * SCALE,
+                    y as f32 * SCALE,
+                    SCALE,
+                    SCALE,
+                    Color::from_rgba(255, 255, 255, brightness),
+                );
             }
         }
     }
