@@ -1,7 +1,7 @@
 use std::io::Read;
 
 use clap::Parser;
-use image::RgbaImage;
+use image::RgbImage;
 
 const HEIGHT: usize = 256;
 const WIDTH: usize = 256;
@@ -28,14 +28,14 @@ fn main() {
 }
 
 fn draw_buffer(buffer: &BitMap) {
-    let mut image = RgbaImage::new(WIDTH as u32, HEIGHT as u32);
+    let mut image = RgbImage::new(WIDTH as u32, HEIGHT as u32);
 
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             if buffer[y][x] > 0 {
                 let brightness = ((buffer[y][x] as f32).log10() * 106.0).clamp(0.0, 255.0) as u8;
 
-                image.get_pixel_mut(x as u32, y as u32).0 = [255, 255, 255, brightness];
+                image.get_pixel_mut(x as u32, y as u32).0 = [brightness, brightness, brightness];
             }
         }
     }
