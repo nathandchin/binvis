@@ -24,10 +24,10 @@ fn main() {
     let mut buffer: BitMap = vec![vec![0; WIDTH]; HEIGHT];
     populate_buffer(&mut buffer, &contents);
 
-    draw_buffer(&buffer);
+    draw_buffer(&buffer, &args.output_pathname);
 }
 
-fn draw_buffer(buffer: &BitMap) {
+fn draw_buffer(buffer: &BitMap, pathname: &String) {
     let mut image = RgbImage::new(WIDTH as u32, HEIGHT as u32);
 
     for y in 0..HEIGHT {
@@ -40,7 +40,7 @@ fn draw_buffer(buffer: &BitMap) {
         }
     }
 
-    image.save("data/out.png").unwrap();
+    image.save(pathname).unwrap();
 }
 
 fn populate_buffer(buffer: &mut BitMap, source: &[u8]) {
