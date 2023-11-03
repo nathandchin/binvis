@@ -1,64 +1,46 @@
-use macroquad::prelude::*;
 use std::io::Read;
 
 use clap::Parser;
+use image::RgbaImage;
 
 const HEIGHT: usize = 256;
 const WIDTH: usize = 256;
-const SCALE: f32 = 3.0;
 
 type BitMap = Vec<Vec<u32>>;
 
 #[derive(Parser, Debug)]
 struct Args {
-    pathname: String,
-}
+    /// The path of the file to visualize.
+    input_pathname: String,
 
-fn window_conf() -> Conf {
-    Conf {
-        window_title: "BinVis".to_string(),
-        // window_height: HEIGHT as i32,
-        // window_width: WIDTH as i32,
-        window_height: (HEIGHT * SCALE as usize) as i32,
-        window_width: (WIDTH * SCALE as usize) as i32,
-        ..Default::default()
-    }
+    /// The path to write to.
+    output_pathname: String,
 }
-
-#[macroquad::main(window_conf)]
-async fn main() {
+fn main() {
     let args = Args::parse();
-    let contents = read_file_contents(&args.pathname)
-        .expect(format!("Could not read file {}", &args.pathname).as_str());
+    let contents = read_file_contents(&args.input_pathname)
+        .expect(format!("Could not read file {}", &args.input_pathname).as_str());
 
     let mut buffer: BitMap = vec![vec![0; WIDTH]; HEIGHT];
     populate_buffer(&mut buffer, &contents);
 
-    loop {
-        clear_background(BLACK);
-
-        draw_buffer(&buffer);
-
-        next_frame().await
-    }
+    draw_buffer(&buffer);
 }
 
 fn draw_buffer(buffer: &BitMap) {
+    let mut image = RgbaImage::new(WIDTH as u32, HEIGHT as u32);
+
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             if buffer[y][x] > 0 {
                 let brightness = ((buffer[y][x] as f32).log10() * 106.0).clamp(0.0, 255.0) as u8;
 
-                draw_rectangle(
-                    x as f32 * SCALE,
-                    y as f32 * SCALE,
-                    SCALE,
-                    SCALE,
-                    Color::from_rgba(255, 255, 255, brightness),
-                );
+                image.get_pixel_mut(x as u32, y as u32).0 = [255, 255, 255, brightness];
             }
         }
     }
+
+    image.save("data/out.png").unwrap();
 }
 
 fn populate_buffer(buffer: &mut BitMap, source: &[u8]) {
