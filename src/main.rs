@@ -33,7 +33,7 @@ fn draw_buffer(buffer: &BitMap, pathname: &String) {
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
             if buffer[y][x] > 0 {
-                let brightness = ((buffer[y][x] as f32).log10() * 106.0).clamp(0.0, 255.0) as u8;
+                let brightness = ((buffer[y][x] as f32).log(1.01) * 0.192).clamp(0.0, 255.0) as u8;
 
                 image.get_pixel_mut(x as u32, y as u32).0 = [brightness, brightness, brightness];
             }
