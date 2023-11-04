@@ -24,13 +24,13 @@ async fn main() {
     let mut buffer: BitMap = vec![vec![vec![0; DEPTH]; WIDTH]; HEIGHT];
     populate_buffer(&mut buffer, &contents);
 
-    let mut position = vec3(400., 400., 400.);
+    let mut position = vec3(275., 275., 275.);
 
     loop {
         clear_background(BLACK);
 
-        position.x += 1.;
-        position.z -= 1.;
+        position = Mat3::from_rotation_y(0.01) * position;
+
         set_camera(&Camera3D {
             position,
             up: Vec3::Y,
@@ -52,10 +52,12 @@ fn draw_buffer(buffer: &BitMap) {
                     let brightness =
                         ((buffer[z][y][x] as f32).log(1.01) * 0.192).clamp(0.0, 255.0) as u8;
 
-                    // image.get_pixel_mut(x as u32, y as u32).0 = [brightness, brightness, brightness];
-                    // draw_cube(position, size, texture, color)
+                    if brightness < 15 {
+                        continue;
+                    }
+
                     draw_cube(
-                        vec3(x as f32, y as f32, z as f32),
+                        vec3(x as f32 - 128., y as f32 - 128., z as f32 - 128.),
                         Vec3::ONE,
                         None,
                         Color::from_rgba(255, 255, 255, brightness),
