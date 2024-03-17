@@ -1,7 +1,7 @@
 use std::io::Read;
 
 use clap::Parser;
-use macroquad::prelude::*;
+use raylib::prelude::*;
 
 type BitMap = Vec<Vec<Vec<u32>>>;
 
@@ -34,7 +34,7 @@ impl Visualization {
         Self { buffer }
     }
 
-    fn draw(&self) {
+    fn draw(&self, d: &mut RaylibMode3D<'_, RaylibDrawHandle<'_>>) {
         for z in 0..Self::DEPTH {
             for y in 0..Self::HEIGHT {
                 for x in 0..Self::WIDTH {
@@ -46,11 +46,12 @@ impl Visualization {
                             continue;
                         }
 
-                        draw_cube(
-                            vec3(x as f32 - 128., y as f32 - 128., z as f32 - 128.),
-                            Vec3::ONE,
-                            None,
-                            Color::from_rgba(255, 255, 255, brightness),
+                        d.draw_cube(
+                            Vector3::new(x as f32 - 128., y as f32 - 128., z as f32 - 128.),
+                            0.8,
+                            0.8,
+                            0.8,
+                            Color::from_hex("F0F0F0").unwrap(),
                         );
                     }
                 }
@@ -59,31 +60,32 @@ impl Visualization {
     }
 }
 
-#[macroquad::main("Binvis")]
-async fn main() {
+fn main() {
     let args = Args::parse();
     let contents = read_file_contents(&args.input_pathname)
         .expect(format!("Could not read file {}", &args.input_pathname).as_str());
 
     let vis = Visualization::new_from_bytes(&contents);
 
-    let mut position = vec3(275., 275., 275.);
+    let (mut rl, thread) = raylib::init().size(1920, 1080).build();
+    let mut camera = Camera3D::perspective(
+        Vector3::new(275., 275., 275.),
+        Vector3::new(0.0, 1.8, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        60.0,
+    );
+    rl.set_camera_mode(camera, CameraMode::CAMERA_THIRD_PERSON);
+    rl.set_target_fps(60);
 
-    loop {
-        clear_background(BLACK);
+    while !rl.window_should_close() {
+        rl.update_camera(&mut camera);
 
-        position = Mat3::from_rotation_y(0.01) * position;
+        let mut d = rl.begin_drawing(&thread);
 
-        set_camera(&Camera3D {
-            position,
-            up: Vec3::Y,
-            target: Vec3::ZERO,
-            ..Default::default()
-        });
+        d.clear_background(Color::BLACK);
 
-        vis.draw();
-
-        next_frame().await;
+        let mut d2 = d.begin_mode3D(camera);
+        vis.draw(&mut d2);
     }
 }
 
