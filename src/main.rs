@@ -74,11 +74,10 @@ fn main() {
         Vector3::new(0.0, 1.0, 0.0),
         60.0,
     );
-    rl.set_camera_mode(camera, CameraMode::CAMERA_THIRD_PERSON);
     rl.set_target_fps(60);
 
     while !rl.window_should_close() {
-        rl.update_camera(&mut camera);
+        rl.update_camera(&mut camera, CameraMode::CAMERA_THIRD_PERSON);
 
         let mut d = rl.begin_drawing(&thread);
 
