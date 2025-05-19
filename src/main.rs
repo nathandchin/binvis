@@ -46,12 +46,9 @@ impl Visualization {
                             continue;
                         }
 
-                        d.draw_cube(
+                        d.draw_point3D(
                             Vector3::new(x as f32 - 128., y as f32 - 128., z as f32 - 128.),
-                            0.8,
-                            0.8,
-                            0.8,
-                            Color::from_hex("F0F0F0").unwrap(),
+                            Color::WHITE,
                         );
                     }
                 }
@@ -63,18 +60,19 @@ impl Visualization {
 fn main() {
     let args = Args::parse();
     let contents = read_file_contents(&args.input_pathname)
-        .expect(format!("Could not read file {}", &args.input_pathname).as_str());
+        .unwrap_or_else(|_| panic!("Could not read file {}", &args.input_pathname));
 
     let vis = Visualization::new_from_bytes(&contents);
 
     let (mut rl, thread) = raylib::init().size(1920, 1080).build();
     let mut camera = Camera3D::perspective(
-        Vector3::new(275., 275., 275.),
+        Vector3::new(200., 200., 200.),
         Vector3::new(0.0, 1.8, 0.0),
         Vector3::new(0.0, 1.0, 0.0),
         60.0,
     );
     rl.set_target_fps(60);
+    rl.disable_cursor();
 
     while !rl.window_should_close() {
         rl.update_camera(&mut camera, CameraMode::CAMERA_THIRD_PERSON);
