@@ -64,8 +64,20 @@ impl Visualization {
 
 fn main() {
     let args = Args::parse();
-    let contents = read_file_contents(&args.input_pathname)
-        .unwrap_or_else(|_| panic!("Could not read file {}", &args.input_pathname));
+
+    let mut file = std::fs::File::open(&args.input_pathname).expect("File should exist");
+    let mut contents = vec![];
+    file.read_to_end(&mut contents)
+        .expect("File should be readable");
+    let file_size = file
+        .metadata()
+        .expect("Should be able to get file metadata")
+        .len();
+
+    let display_text = format!(
+        "File: {}\nSize: {} bytes\n\nDraw threshold: {}",
+        &args.input_pathname, file_size, args.draw_threshold
+    );
 
     let vis = Visualization::new_from_bytes(&contents, args.draw_threshold);
 
@@ -93,17 +105,9 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
 
         d.clear_background(Color::BLACK);
+        d.draw_text(&display_text, 20, 20, 26, Color::LIGHTGRAY);
 
         let mut d2 = d.begin_mode3D(camera);
         vis.draw(&mut d2);
     }
-}
-
-fn read_file_contents(pathname: &String) -> std::io::Result<Vec<u8>> {
-    let mut file = std::fs::File::open(pathname)?;
-
-    let mut contents = Vec::new();
-    file.read_to_end(&mut contents)?;
-
-    Ok(contents)
 }
