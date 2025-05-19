@@ -3,8 +3,6 @@ use std::io::Read;
 use clap::Parser;
 use raylib::prelude::*;
 
-type BitMap = Vec<Vec<Vec<u32>>>;
-
 #[derive(Parser, Debug)]
 struct Args {
     /// The path of the file to visualize.
@@ -12,7 +10,7 @@ struct Args {
 }
 
 struct Visualization {
-    buffer: BitMap,
+    points: Vec<(f32, f32, f32)>,
 }
 
 impl Visualization {
@@ -21,7 +19,7 @@ impl Visualization {
     const DEPTH: usize = 256;
 
     fn new_from_bytes(bytes: &[u8]) -> Self {
-        let mut buffer: BitMap = vec![vec![vec![0; Self::DEPTH]; Self::WIDTH]; Self::HEIGHT];
+        let mut buffer = vec![vec![vec![0; Self::DEPTH]; Self::WIDTH]; Self::HEIGHT];
 
         for pair in bytes.windows(3) {
             let x = pair[0] as usize;
@@ -31,28 +29,27 @@ impl Visualization {
             buffer[z][y][x] += 1;
         }
 
-        Self { buffer }
-    }
+        let mut points = vec![];
 
-    fn draw(&self, d: &mut RaylibMode3D<'_, RaylibDrawHandle<'_>>) {
+        // Only want to draw sufficiently "bright" points
         for z in 0..Self::DEPTH {
             for y in 0..Self::HEIGHT {
                 for x in 0..Self::WIDTH {
-                    if self.buffer[z][y][x] > 0 {
-                        let brightness = ((self.buffer[z][y][x] as f32).log(1.01) * 0.192)
-                            .clamp(0.0, 255.0) as u8;
-
-                        if brightness < 15 {
-                            continue;
-                        }
-
-                        d.draw_point3D(
-                            Vector3::new(x as f32 - 128., y as f32 - 128., z as f32 - 128.),
-                            Color::WHITE,
-                        );
+                    let brightness =
+                        ((buffer[z][y][x] as f32).log(1.01) * 0.192).clamp(0.0, 255.0) as u8;
+                    if brightness >= 15 {
+                        points.push((x as f32 - 128., y as f32 - 128., z as f32 - 128.));
                     }
                 }
             }
+        }
+
+        Self { points }
+    }
+
+    fn draw(&self, d: &mut RaylibMode3D<'_, RaylibDrawHandle<'_>>) {
+        for &(x, y, z) in &self.points {
+            d.draw_point3D(Vector3::new(x, y, z), Color::WHITE);
         }
     }
 }
