@@ -3,6 +3,7 @@ use std::io::Read;
 use clap::Parser;
 use raylib::prelude::*;
 
+/// Pres `C` while running to capture/release the cursor.
 #[derive(Parser, Debug)]
 struct Args {
     /// The path of the file to visualize.
@@ -79,6 +80,14 @@ fn main() {
     rl.disable_cursor();
 
     while !rl.window_should_close() {
+        if matches!(rl.get_key_pressed(), Some(KeyboardKey::KEY_C)) {
+            if rl.is_cursor_hidden() {
+                rl.show_cursor()
+            } else {
+                rl.disable_cursor();
+            }
+        }
+
         rl.update_camera(&mut camera, CameraMode::CAMERA_THIRD_PERSON);
 
         let mut d = rl.begin_drawing(&thread);
