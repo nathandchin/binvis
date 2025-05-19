@@ -3,7 +3,8 @@ use std::io::Read;
 use clap::Parser;
 use raylib::prelude::*;
 
-/// Pres `C` while running to capture/release the cursor.
+/// Pres `C` while running to capture/release the cursor. Use Page Up/Down keys
+/// to dynamically control draw threshold.
 #[derive(Parser, Debug)]
 struct Args {
     /// The path of the file to visualize.
@@ -16,8 +17,14 @@ struct Args {
     draw_threshold: u8,
 }
 
+/// Represents points found at the point in the three-dimensional vector,
+/// indexed by height, width, and depth, in that order.
+type BrightnessBuffer = Vec<Vec<Vec<u32>>>;
+
 struct Visualization {
+    brightness_buffer: BrightnessBuffer,
     points: Vec<(f32, f32, f32)>,
+    draw_threshold: u8,
 }
 
 impl Visualization {
@@ -25,8 +32,9 @@ impl Visualization {
     const WIDTH: usize = 256;
     const DEPTH: usize = 256;
 
-    fn new_from_bytes(bytes: &[u8], draw_threshold: u8) -> Self {
-        let mut buffer = vec![vec![vec![0; Self::DEPTH]; Self::WIDTH]; Self::HEIGHT];
+    pub fn new_from_bytes(bytes: &[u8], draw_threshold: u8) -> Self {
+        let mut buffer: Vec<Vec<Vec<u32>>> =
+            vec![vec![vec![0; Self::DEPTH]; Self::WIDTH]; Self::HEIGHT];
 
         for pair in bytes.windows(3) {
             let x = pair[0] as usize;
@@ -36,6 +44,28 @@ impl Visualization {
             buffer[z][y][x] += 1;
         }
 
+        let points = Self::calculate_points(&buffer, draw_threshold);
+
+        Self {
+            brightness_buffer: buffer,
+            points,
+            draw_threshold,
+        }
+    }
+
+    fn draw_threshold(&self) -> u8 {
+        self.draw_threshold
+    }
+
+    pub fn set_draw_threshold(&mut self, draw_threshold: u8) {
+        self.points = Self::calculate_points(&self.brightness_buffer, draw_threshold);
+        self.draw_threshold = draw_threshold;
+    }
+
+    fn calculate_points(
+        brightness_buffer: &BrightnessBuffer,
+        draw_threshold: u8,
+    ) -> Vec<(f32, f32, f32)> {
         let mut points = vec![];
 
         // Only want to draw sufficiently "bright" points
@@ -43,19 +73,18 @@ impl Visualization {
         for z in 0..Self::DEPTH {
             for y in 0..Self::HEIGHT {
                 for x in 0..Self::WIDTH {
-                    let brightness =
-                        ((buffer[z][y][x] as f32).log(1.01) * 0.192).clamp(0.0, 255.0) as u8;
+                    let brightness = ((brightness_buffer[z][y][x] as f32).log(1.01) * 0.192)
+                        .clamp(0.0, 255.0) as u8;
                     if brightness >= draw_threshold {
                         points.push((x as f32 - 128., y as f32 - 128., z as f32 - 128.));
                     }
                 }
             }
         }
-
-        Self { points }
+        points
     }
 
-    fn draw(&self, d: &mut RaylibMode3D<'_, RaylibDrawHandle<'_>>) {
+    pub fn draw(&self, d: &mut RaylibMode3D<'_, RaylibDrawHandle<'_>>) {
         for &(x, y, z) in &self.points {
             d.draw_point3D(Vector3::new(x, y, z), Color::WHITE);
         }
@@ -74,12 +103,7 @@ fn main() {
         .expect("Should be able to get file metadata")
         .len();
 
-    let display_text = format!(
-        "File: {}\nSize: {} bytes\n\nDraw threshold: {}",
-        &args.input_pathname, file_size, args.draw_threshold
-    );
-
-    let vis = Visualization::new_from_bytes(&contents, args.draw_threshold);
+    let mut vis = Visualization::new_from_bytes(&contents, args.draw_threshold);
 
     let (mut rl, thread) = raylib::init().size(1920, 1080).build();
     let mut camera = Camera3D::perspective(
@@ -92,13 +116,30 @@ fn main() {
     rl.disable_cursor();
 
     while !rl.window_should_close() {
-        if matches!(rl.get_key_pressed(), Some(KeyboardKey::KEY_C)) {
-            if rl.is_cursor_hidden() {
-                rl.show_cursor()
-            } else {
-                rl.disable_cursor();
+        if let Some(ev) = rl.get_key_pressed() {
+            match ev {
+                KeyboardKey::KEY_C => {
+                    if rl.is_cursor_hidden() {
+                        rl.show_cursor()
+                    } else {
+                        rl.disable_cursor();
+                    }
+                }
+                KeyboardKey::KEY_PAGE_UP => {
+                    vis.set_draw_threshold(vis.draw_threshold().saturating_add(2))
+                }
+                KeyboardKey::KEY_PAGE_DOWN => {
+                    vis.set_draw_threshold(vis.draw_threshold().saturating_sub(2))
+                }
+
+                _ => (),
             }
         }
+
+        let display_text = format!(
+            "File: {}\nSize: {} bytes\n\nDraw threshold: {}",
+            &args.input_pathname, file_size, vis.draw_threshold()
+        );
 
         rl.update_camera(&mut camera, CameraMode::CAMERA_THIRD_PERSON);
 
